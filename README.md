@@ -182,6 +182,6 @@ POST /api/users/{id}/subscribe/ (требуется токен)
 
 Mikhail Danilov
 
-    GitHub: @danilovmikhail
+    GitHub: @seaG7
 
     Docker Hub: danilovmikhail
