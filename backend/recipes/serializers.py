@@ -53,7 +53,6 @@ class RecipeMinifiedSerializer(serializers.ModelSerializer):
 
 
 class RecipeReadSerializer(serializers.ModelSerializer):
-    tags = TagSerializer(many=True, read_only=True)
     author = CustomUserSerializer(read_only=True)
     ingredients = RecipeIngredientReadSerializer(
         source='recipe_ingredients', many=True
@@ -65,7 +64,7 @@ class RecipeReadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = (
-            'id', 'tags', 'author', 'ingredients',
+            'id', 'author', 'ingredients',
             'is_favorited', 'is_in_shopping_cart',
             'name', 'image', 'text', 'cooking_time'
         )
@@ -197,9 +196,4 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         request = self.context.get('request')
         context = {'request': request}
-        data = RecipeReadSerializer(instance, context=context).data
-
-        if 'tags' in data:
-            data.pop('tags', None)
-
-        return data
+        return RecipeReadSerializer(instance, context=context).data
