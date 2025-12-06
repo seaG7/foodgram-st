@@ -21,16 +21,16 @@ services:
     build: ../backend/
     env_file: .env
     volumes:
-      - static_value:/app/static/
-      - media_value:/app/media/
-      - ../data/:/data/
+      - static_value:/var/html/static/
+      - media_value:/usr/share/nginx/html/media/
     depends_on:
       db:
         condition: service_healthy
 
   frontend:
-    container_name: foodgram-front
+    # Собираем из локальной папки
     build: ../frontend/
+    env_file: .env
     volumes:
       - ../frontend/:/app/result_build/
 
