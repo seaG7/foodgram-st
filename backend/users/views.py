@@ -6,9 +6,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Subscription, User
-from .serializers import (
-    AvatarSerializer, CustomUserSerializer, SubscriptionSerializer
-)
+from .serializers import (AvatarSerializer, CustomUserSerializer,
+                          SubscriptionSerializer)
 
 
 class CustomUserViewSet(UserViewSet):
