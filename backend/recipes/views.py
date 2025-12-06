@@ -4,18 +4,16 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from .filters import IngredientFilter, RecipeFilter
-from .models import (
-    Favorite, Ingredient, Recipe, RecipeIngredient, ShoppingCart, Tag
-)
+from .models import (Favorite, Ingredient, Recipe, RecipeIngredient,
+                     ShoppingCart, Tag)
 from .permissions import IsAuthorOrReadOnly
-from .serializers import (
-    IngredientSerializer, RecipeReadSerializer, RecipeWriteSerializer,
-    RecipeMinifiedSerializer, TagSerializer
-)
+from .serializers import (IngredientSerializer, RecipeMinifiedSerializer,
+                          RecipeReadSerializer, RecipeWriteSerializer,
+                          TagSerializer)
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
@@ -63,16 +61,18 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     def _add_or_delete_relation(self, request, pk, model):
         recipe = get_object_or_404(Recipe, pk=pk)
-        
+
         if request.method == 'POST':
-            obj, created = model.objects.get_or_create(user=request.user, recipe=recipe)
-            
+            obj, created = model.objects.get_or_create(
+                user=request.user, recipe=recipe
+            )
+
             if not created:
                 return Response(
                     {'errors': 'Уже добавлено!'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            
+
             serializer = RecipeMinifiedSerializer(
                 recipe, context={'request': request}
             )
@@ -82,7 +82,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if obj.exists():
             obj.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
-        
+
         return Response(
             {'errors': 'Объект не найден'},
             status=status.HTTP_400_BAD_REQUEST
@@ -108,7 +108,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
             )
 
         response = HttpResponse(shopping_list, content_type='text/plain')
-        response['Content-Disposition'] = 'attachment; filename="shopping_list.txt"'
+        response['Content-Disposition'] = (
+            'attachment; filename="shopping_list.txt"'
+        )
         return response
 
     @action(

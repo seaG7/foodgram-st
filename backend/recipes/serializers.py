@@ -1,9 +1,9 @@
-from rest_framework import serializers
 from django.db import transaction
-from users.serializers import CustomUserSerializer, Base64ImageField
-from .models import (
-    Favorite, Ingredient, Recipe, RecipeIngredient, ShoppingCart, Tag
-)
+from rest_framework import serializers
+from users.serializers import Base64ImageField, CustomUserSerializer
+
+from .models import (Favorite, Ingredient, Recipe, RecipeIngredient,
+                     ShoppingCart, Tag)
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -53,7 +53,7 @@ class RecipeMinifiedSerializer(serializers.ModelSerializer):
 
 
 class RecipeReadSerializer(serializers.ModelSerializer):
-    """Сериализатор для ЧТЕНИЯ рецепта (GET)."""
+    tags = TagSerializer(many=True, read_only=True)
     author = CustomUserSerializer(read_only=True)
     ingredients = RecipeIngredientReadSerializer(
         source='recipe_ingredients', many=True
@@ -65,15 +65,9 @@ class RecipeReadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = (
-            'id',
-            'author',
-            'ingredients',
-            'is_favorited',
-            'is_in_shopping_cart',
-            'name',
-            'image',
-            'text',
-            'cooking_time'
+            'id', 'tags', 'author', 'ingredients',
+            'is_favorited', 'is_in_shopping_cart',
+            'name', 'image', 'text', 'cooking_time'
         )
 
     def get_image(self, obj):
@@ -84,7 +78,9 @@ class RecipeReadSerializer(serializers.ModelSerializer):
     def get_is_favorited(self, obj):
         request = self.context.get('request')
         if request and request.user.is_authenticated:
-            return Favorite.objects.filter(user=request.user, recipe=obj).exists()
+            return Favorite.objects.filter(
+                user=request.user, recipe=obj
+            ).exists()
         return False
 
     def get_is_in_shopping_cart(self, obj):
@@ -97,7 +93,6 @@ class RecipeReadSerializer(serializers.ModelSerializer):
 
 
 class RecipeWriteSerializer(serializers.ModelSerializer):
-    """Сериализатор для ЗАПИСИ рецепта (POST/PATCH)."""
     ingredients = RecipeIngredientWriteSerializer(many=True)
     tags = serializers.PrimaryKeyRelatedField(
         queryset=Tag.objects.all(),
@@ -126,7 +121,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "Поле 'ingredients' не может быть пустым."
             )
-        
+
         ingredients_list = [item['id'] for item in value]
         if len(ingredients_list) != len(set(ingredients_list)):
             raise serializers.ValidationError(
@@ -162,22 +157,22 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         tags = validated_data.pop('tags', [])
         ingredients = validated_data.pop('ingredients')
-        
+
         author = self.context.get('request').user
         recipe = Recipe.objects.create(author=author, **validated_data)
-        
+
         if tags:
             recipe.tags.set(tags)
-            
+
         self.create_ingredients(ingredients, recipe)
         return recipe
 
     @transaction.atomic
     def update(self, instance, validated_data):
         if 'ingredients' not in validated_data:
-             raise serializers.ValidationError(
-                 {'ingredients': 'Это поле обязательно!'}
-             )
+            raise serializers.ValidationError(
+                {'ingredients': 'Это поле обязательно!'}
+            )
 
         tags = validated_data.get('tags')
         ingredients = validated_data.pop('ingredients')
@@ -193,7 +188,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
         if tags is not None:
             instance.tags.set(tags)
-        
+
         instance.recipe_ingredients.all().delete()
         self.create_ingredients(ingredients, instance)
 
@@ -202,4 +197,9 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         request = self.context.get('request')
         context = {'request': request}
-        return RecipeReadSerializer(instance, context=context).data
+        data = RecipeReadSerializer(instance, context=context).data
+
+        if 'tags' in data:
+            data.pop('tags', None)
+
+        return data

@@ -10,7 +10,6 @@ User = get_user_model()
 
 
 class Base64ImageField(serializers.ImageField):
-    """Кастомное поле для декодирования изображения из base64."""
     def to_internal_value(self, data):
         if isinstance(data, str) and data.startswith('data:image'):
             format, imgstr = data.split(';base64,')
@@ -20,7 +19,6 @@ class Base64ImageField(serializers.ImageField):
 
 
 class CustomUserCreateSerializer(serializers.ModelSerializer):
-    """Сериализатор для регистрации пользователя."""
     class Meta:
         model = User
         fields = ('email', 'id', 'username', 'first_name',
@@ -28,12 +26,10 @@ class CustomUserCreateSerializer(serializers.ModelSerializer):
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
-        user = User.objects.create_user(**validated_data)
-        return user
+        return User.objects.create_user(**validated_data)
 
 
 class CustomUserSerializer(serializers.ModelSerializer):
-    """Сериализатор для отображения пользователя (User)."""
     is_subscribed = serializers.SerializerMethodField()
     avatar = Base64ImageField(required=False, allow_null=True)
 
@@ -49,25 +45,9 @@ class CustomUserSerializer(serializers.ModelSerializer):
         return Subscription.objects.filter(
             user=request.user, author=obj
         ).exists()
-        
-class CustomUserSerializerNoAvatar(serializers.ModelSerializer):
-    is_subscribed = serializers.SerializerMethodField()
 
-    class Meta:
-        model = User
-        fields = ('email', 'id', 'username', 'first_name',
-                  'last_name', 'is_subscribed')
-
-    def get_is_subscribed(self, obj):
-        request = self.context.get('request')
-        if request is None or request.user.is_anonymous:
-            return False
-        return Subscription.objects.filter(
-            user=request.user, author=obj
-        ).exists()
 
 class AvatarSerializer(serializers.ModelSerializer):
-    """Сериализатор только для аватара."""
     avatar = Base64ImageField()
 
     class Meta:
@@ -76,12 +56,13 @@ class AvatarSerializer(serializers.ModelSerializer):
 
 
 class SubscriptionSerializer(CustomUserSerializer):
-    """Сериализатор для выдачи подписок (UserWithRecipes)."""
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
 
     class Meta(CustomUserSerializer.Meta):
-        fields = CustomUserSerializer.Meta.fields + ('recipes', 'recipes_count')
+        fields = CustomUserSerializer.Meta.fields + (
+            'recipes', 'recipes_count'
+        )
 
     def get_recipes_count(self, obj):
         return obj.recipes.count()
@@ -97,7 +78,6 @@ class SubscriptionSerializer(CustomUserSerializer):
                 pass
 
         from recipes.serializers import RecipeMinifiedSerializer
-        
         serializer = RecipeMinifiedSerializer(
             recipes, many=True, context={'request': request}
         )
