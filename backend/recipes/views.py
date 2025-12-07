@@ -9,11 +9,10 @@ from rest_framework.response import Response
 
 from .filters import IngredientFilter, RecipeFilter
 from .models import (Favorite, Ingredient, Recipe, RecipeIngredient,
-                     ShoppingCart, Tag)
+                     ShoppingCart)
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (IngredientSerializer, RecipeMinifiedSerializer,
-                          RecipeReadSerializer, RecipeWriteSerializer,
-                          TagSerializer)
+                          RecipeReadSerializer, RecipeWriteSerializer)
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
@@ -22,13 +21,6 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = (AllowAny,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = IngredientFilter
-    pagination_class = None
-
-
-class TagViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Tag.objects.all()
-    serializer_class = TagSerializer
-    permission_classes = (AllowAny,)
     pagination_class = None
 
 
@@ -45,21 +37,29 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(
         detail=True,
-        methods=['post', 'delete'],
+        methods=['post'],
         permission_classes=[IsAuthenticated]
     )
     def favorite(self, request, pk):
-        return self._add_or_delete_relation(request, pk, Favorite)
+        return self._add_relation(request, pk, Favorite)
+
+    @favorite.mapping.delete
+    def delete_favorite(self, request, pk):
+        return self._delete_relation(request, pk, Favorite)
 
     @action(
         detail=True,
-        methods=['post', 'delete'],
+        methods=['post'],
         permission_classes=[IsAuthenticated]
     )
     def shopping_cart(self, request, pk):
-        return self._add_or_delete_relation(request, pk, ShoppingCart)
+        return self._add_relation(request, pk, ShoppingCart)
 
-    def _add_or_delete_relation(self, request, pk, model):
+    @shopping_cart.mapping.delete
+    def delete_shopping_cart(self, request, pk):
+        return self._delete_relation(request, pk, ShoppingCart)
+
+    def _add_relation(self, request, pk, model):
         recipe = get_object_or_404(Recipe, pk=pk)
 
         if request.method == 'POST':
@@ -78,6 +78,18 @@ class RecipeViewSet(viewsets.ModelViewSet):
             )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+        obj = model.objects.filter(user=request.user, recipe=recipe)
+        if obj.exists():
+            obj.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        return Response(
+            {'errors': 'Объект не найден'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    def _delete_relation(self, request, pk, model):
+        recipe = get_object_or_404(Recipe, pk=pk)
         obj = model.objects.filter(user=request.user, recipe=recipe)
         if obj.exists():
             obj.delete()

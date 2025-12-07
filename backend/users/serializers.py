@@ -4,8 +4,6 @@ from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from rest_framework import serializers
 
-from .models import Subscription
-
 User = get_user_model()
 
 
@@ -42,9 +40,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if request is None or request.user.is_anonymous:
             return False
-        return Subscription.objects.filter(
-            user=request.user, author=obj
-        ).exists()
+        return request.user.subscriber.filter(author=obj).exists()
 
 
 class AvatarSerializer(serializers.ModelSerializer):

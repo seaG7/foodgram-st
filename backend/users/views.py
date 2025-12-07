@@ -64,15 +64,19 @@ class CustomUserViewSet(UserViewSet):
         permission_classes=[IsAuthenticated]
     )
     def subscribe(self, request, id=None):
+        return self._manage_subscription(request, id)
+
+    def _manage_subscription(self, request, id):
         user_to_subscribe = get_object_or_404(User, pk=id)
+
         if request.method == 'POST':
             if request.user == user_to_subscribe:
                 return Response(
                     {'errors': 'Нельзя подписаться на самого себя'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            if Subscription.objects.filter(
-                user=request.user, author=user_to_subscribe
+            if request.user.subscriber.filter(
+                author=user_to_subscribe
             ).exists():
                 return Response(
                     {'errors': 'Вы уже подписаны на этого пользователя'},
@@ -86,8 +90,8 @@ class CustomUserViewSet(UserViewSet):
             )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-        subscription = Subscription.objects.filter(
-            user=request.user, author=user_to_subscribe
+        subscription = request.user.subscriber.filter(
+            author=user_to_subscribe
         )
         if subscription.exists():
             subscription.delete()
